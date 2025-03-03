@@ -35,23 +35,19 @@ jobs:
         run: |
           function launch_and_wait() {
             echo "Launching EC2 instance from Launch Template..."
-            aws ec2 run-instances \
+            INSTANCE_ID=$(aws ec2 run-instances \
               --launch-template "LaunchTemplateId=lt-0a28d1ceb831cb066,Version=\$Latest" \
-              --count 1
+              --count 1 \
+              --query "Instances[0].InstanceId" \
+              --output text)
             
-            # Assume the instance is tagged "SmokeTest" so we can retrieve its ID
-            INSTANCE_ID=$(aws ec2 describe-instances \
-                --filters "Name=tag:Name,Values=SmokeTest" \
-                --query "Reservations[].Instances[].InstanceId" \
-                --output text)
-            
+            echo "Launched instance with ID: $INSTANCE_ID"
             echo "Waiting for instance $INSTANCE_ID to be healthy..."
             aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
           }
-      
-          # Launch and wait; if it fails, try once more.
+          
+          # Run the function and retry once if needed.
           if ! launch_and_wait; then
             echo "Instance did not become healthy. Retrying once more..."
             launch_and_wait
           fi
-      
