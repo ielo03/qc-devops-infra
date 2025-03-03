@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e  # Exit immediately if a command exits with a non-zero status
 
+cd ../qc-devops-source
+
 echo "========================================"
 echo "Running backend tests..."
 echo "========================================"
