@@ -55,4 +55,29 @@ if [[ "$RECIPE" != \<h3\>* ]]; then
 fi
 
 echo "POST /api/concoct returned the expected response."
+
+# ------------------------------
+# Test 3: GET /favicon.ico returns 200
+# ------------------------------
+echo "Testing GET /favicon.ico..."
+FAVICON_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/favicon.ico)
+if [ "$FAVICON_CODE" != "200" ]; then
+  echo "Error: GET /favicon.ico did not return 200. Got HTTP status: $FAVICON_CODE"
+  exit 1
+else
+  echo "GET /favicon.ico returned HTTP 200."
+fi
+
+# ------------------------------
+# Test 4: GET / returns 200
+# ------------------------------
+echo "Testing GET /..."
+HOME_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/)
+if [ "$HOME_CODE" != "200" ]; then
+  echo "Error: GET / did not return 200. Got HTTP status: $HOME_CODE"
+  exit 1
+else
+  echo "GET / returned HTTP 200."
+fi
+
 echo "All integration tests passed!"
