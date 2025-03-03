@@ -16,20 +16,42 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # Check out source repo
-      - name: Checkout source repo
-        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          repository: ielo03/qc-devops-source
-          token: ${{ secrets.GITHUB_TOKEN }}
-          path: source
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
 
-      - name: List contents of source repo
-        run: ls -la source
+      # Spin up EC2 instance
+      - name: Launch and Wait for EC2 Instance Health
+        run: |
+          function launch_and_wait() {
+            echo "Launching EC2 instance from Launch Template..."
+            aws ec2 run-instances \
+              --launch-template "LaunchTemplateId=lt-0a28d1ceb831cb066,Version=\$Latest" \
+              --count 1
+            
+            # Assume the instance is tagged "SmokeTest" so we can retrieve its ID
+            INSTANCE_ID=$(aws ec2 describe-instances \
+                --filters "Name=tag:Name,Values=SmokeTest" \
+                --query "Reservations[].Instances[].InstanceId" \
+                --output text)
+            
+            echo "Waiting for instance $INSTANCE_ID to be healthy..."
+            aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+          }
+      
+          # Launch and wait; if it fails, try once more.
+          if ! launch_and_wait; then
+            echo "Instance did not become healthy. Retrying once more..."
+            launch_and_wait
+          fi
+      
