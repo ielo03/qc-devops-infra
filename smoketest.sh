@@ -30,7 +30,7 @@ echo "Waiting for services to stabilize..."
 echo "========================================"
 echo "Running additional integration tests..."
 cd ../qc-devops-infra
-./integration-tests.sh
+sudo -u ubuntu ./integration-tests.sh
 
 echo "========================================"
 echo "Shutting down docker-compose services..."
