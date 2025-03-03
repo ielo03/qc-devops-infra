@@ -33,21 +33,6 @@ jobs:
       # Spin up EC2 instance
       - name: Launch and Wait for EC2 Instance Health
         run: |
-          function launch_and_wait() {
-            echo "Launching EC2 instance from Launch Template..."
-            INSTANCE_ID=$(aws ec2 run-instances \
-              --launch-template "LaunchTemplateId=lt-0a28d1ceb831cb066,Version=\$Latest" \
-              --count 1 \
-              --query "Instances[0].InstanceId" \
-              --output text)
-            
-            echo "Launched instance with ID: $INSTANCE_ID"
-            echo "Waiting for instance $INSTANCE_ID to be healthy..."
-            aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
-          }
-          
-          # Run the function and retry once if needed.
-          if ! launch_and_wait; then
-            echo "Instance did not become healthy. Retrying once more..."
-            launch_and_wait
-          fi
+          aws ec2 run-instances \
+          --launch-template "LaunchTemplateId=lt-0a28d1ceb831cb066,Version=\$Latest" \
+          --count 1
