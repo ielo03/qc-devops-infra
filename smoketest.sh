@@ -22,21 +22,15 @@ cd ..
 echo "========================================"
 echo "Both backend and frontend tests passed."
 echo "Building and launching docker-compose services..."
-docker-compose up --build -d
+docker compose up --build -d
 
 echo "Waiting for services to stabilize..."
-sleep 15  # adjust the sleep time as needed
+./backend/wait-for-it.sh localhost:3002 --timeout=30 --strict -- echo "Backend is up!"
 
 echo "========================================"
 echo "Running additional integration tests..."
-# Here, add your integration test commands. For example:
-# curl -s -I http://localhost:3000/api/health
-# Or if you have an integration test script, run it:
-if [ -x "./integration-tests.sh" ]; then
-  ./integration-tests.sh
-else
-  echo "No integration test script found. Please add integration test commands here."
-fi
+cd ../qc-devops-infra
+./integration-tests.sh
 
 echo "========================================"
 echo "Shutting down docker-compose services..."
