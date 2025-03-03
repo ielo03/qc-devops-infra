@@ -29,14 +29,8 @@ echo "Waiting for services to stabilize..."
 
 echo "========================================"
 echo "Running additional integration tests..."
-# Here, add your integration test commands. For example:
-# curl -s -I http://localhost:3000/api/health
-# Or if you have an integration test script, run it:
-if [ -x "./integration-tests.sh" ]; then
-  ./integration-tests.sh
-else
-  echo "No integration test script found. Please add integration test commands here."
-fi
+cd ../qc-devops-infra
+./integration-tests.sh
 
 echo "========================================"
 echo "Shutting down docker-compose services..."
