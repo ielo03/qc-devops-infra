@@ -22,10 +22,10 @@ cd ..
 echo "========================================"
 echo "Both backend and frontend tests passed."
 echo "Building and launching docker-compose services..."
-docker-compose up --build -d
+docker compose up --build -d
 
 echo "Waiting for services to stabilize..."
-sleep 15  # adjust the sleep time as needed
+./backend/wait-for-it.sh localhost:3002 --timeout=30 --strict -- echo "Backend is up!"
 
 echo "========================================"
 echo "Running additional integration tests..."
