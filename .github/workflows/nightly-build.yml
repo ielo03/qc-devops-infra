@@ -67,6 +67,31 @@ jobs:
           npm install
           npm test
 
+      - name: Docker Compose Up
+        run: docker compose up --build -d
+        
+      - name: Wait for Backend Health (up to 60 seconds)
+        run: |
+          for i in {1..30}; do
+              if curl -s http://localhost:${BACKEND_PORT}/health > /dev/null; then
+                  echo "Backend is healthy."
+                  exit 0
+              else
+                  echo "Waiting for backend..."
+                  sleep 2
+              fi
+          done
+          echo "Backend did not become healthy in time."
+          exit 1
+
+      - name: Run Integration Tests
+        run: |
+          chmod +x ./qc-devops-infra/integration-tests.sh
+          ./qc-devops-infra/integration-tests.sh
+
+      - name: Tear Down Deployment
+        run: docker compose down
+      
       # - name: Configure AWS Credentials
       #   uses: aws-actions/configure-aws-credentials@v2
       #   with:
@@ -93,20 +118,6 @@ jobs:
 
       # - name: Deploy Application with Docker Compose
       #   run: docker compose up --build -d
-
-      # - name: Wait for Backend Health (up to 60 seconds)
-      #   run: |
-      #     for i in {1..30}; do
-      #         if curl -s http://localhost:${BACKEND_PORT}/health > /dev/null; then
-      #             echo "Backend is healthy."
-      #             exit 0
-      #         else
-      #             echo "Waiting for backend..."
-      #             sleep 2
-      #         fi
-      #     done
-      #     echo "Backend did not become healthy in time."
-      #     exit 1
 
       # - name: Run Integration Tests
       #   run: |
