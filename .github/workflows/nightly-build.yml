@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  Test:
     runs-on: ubuntu-24.04
     env:
       AWS_REGION: us-west-1
@@ -29,7 +29,7 @@ jobs:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Infra
         uses: actions/checkout@v4
 
       - name: Checkout Source
@@ -37,6 +37,23 @@ jobs:
         with:
           repository: ielo03/qc-devops-source
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create .env file for backend and frontend
+        run: |
+          cat <<'EOF' > .env
+          DB_HOST=mysql
+          DB_PORT=3306
+          FRONTEND_PORT=3001
+          FRONTEND_HOST=0.0.0.0
+          BACKEND_PORT=3002
+          BACKEND_HOST=0.0.0.0
+          MYSQL_ROOT_PASSWORD=password
+          MYSQL_DATABASE=qc-test
+          MYSQL_USER=qc-user
+          MYSQL_PASSWORD=password
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          EOF
+          cat .env
 
       - name: Run Backend Unit Tests
         working-directory: ./backend
