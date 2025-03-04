@@ -37,8 +37,10 @@ jobs:
         with:
           repository: ielo03/qc-devops-source
           token: ${{ secrets.GITHUB_TOKEN }}
+          path: source
 
       - name: Create .env file for backend and frontend
+        working-directory: source
         run: |
           cat <<'EOF' > .env
           DB_HOST=mysql
@@ -56,13 +58,13 @@ jobs:
           cat .env
 
       - name: Run Backend Unit Tests
-        working-directory: ./backend
+        working-directory: source/backend
         run: |
           npm install
           npm test
       
       - name: Run Frontend Unit Tests
-        working-directory: ./frontend
+        working-directory: source/frontend
         run: |
           npm install
           npm test
