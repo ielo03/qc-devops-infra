@@ -8,25 +8,25 @@ on:
 jobs:
   Test:
     runs-on: ubuntu-24.04
-    env:
-      AWS_REGION: us-west-1
-      # AWS account ID (ECR registry prefix)
-      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
-      # Image names with tag (adjust if needed)
-      FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
-      BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
-      # Application environment variables (override via GitHub Secrets)
-      DB_HOST: mysql
-      DB_PORT: 3306
-      FRONTEND_PORT: 3001
-      FRONTEND_HOST: 0.0.0.0
-      BACKEND_PORT: 3002
-      BACKEND_HOST: 0.0.0.0
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    # env:
+    #   AWS_REGION: us-west-1
+    #   # AWS account ID (ECR registry prefix)
+    #   ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+    #   # Image names with tag (adjust if needed)
+    #   FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
+    #   BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
+    #   # Application environment variables (override via GitHub Secrets)
+    #   DB_HOST: mysql
+    #   DB_PORT: 3306
+    #   FRONTEND_PORT: 3001
+    #   FRONTEND_HOST: 0.0.0.0
+    #   BACKEND_PORT: 3002
+    #   BACKEND_HOST: 0.0.0.0
+    #   MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+    #   MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+    #   MYSQL_USER: ${{ secrets.MYSQL_USER }}
+    #   MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+    #   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
     steps:
       - name: Checkout Infra
@@ -93,38 +93,19 @@ jobs:
 
       - name: Tear Down Deployment
         run: docker compose down
-      
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v2
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: ${{ env.AWS_REGION }}
-
-      # - name: Create .env file for Docker Compose
-      #   run: |
-      #     cat <<EOF > .env
-      #     DB_HOST=${DB_HOST}
-      #     DB_PORT=${DB_PORT}
-      #     FRONTEND_PORT=${FRONTEND_PORT}
-      #     FRONTEND_HOST=${FRONTEND_HOST}
-      #     BACKEND_PORT=${BACKEND_PORT}
-      #     BACKEND_HOST=${BACKEND_HOST}
-      #     MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      #     MYSQL_DATABASE=${MYSQL_DATABASE}
-      #     MYSQL_USER=${MYSQL_USER}
-      #     MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      #     GEMINI_API_KEY=${GEMINI_API_KEY}
-      #     EOF
-      #     cat .env
-
-      # - name: Deploy Application with Docker Compose
-      #   run: docker compose up --build -d
-
-      # - name: Run Integration Tests
-      #   run: |
-      #     chmod +x ./qc-devops-infra/integration-tests.sh
-      #     ./qc-devops-infra/integration-tests.sh
-
-      # - name: Tear Down Deployment
-      #   run: docker compose down
+    
+  Push-Images:
+    needs: Test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "us-west-1"
+          
+      - name: Build and Push Images
+        run: |
+          chmod +x ./push-images.sh
+          ./push-images.sh
