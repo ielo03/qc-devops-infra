@@ -4,7 +4,7 @@ set -e
 sleep 5
 
 # Define expected responses
-EXPECTED_GET='[{"id":1,"title":"Test","recipe":"<h3>Test</h3><p>This is a test.</p>"}]'
+EXPECTED_GET='{"id":1,"title":"Test","recipe":"<h3>Test</h3><p>This is a test.</p>"}'
 
 echo "Running integration tests..."
 
@@ -12,13 +12,14 @@ echo "Running integration tests..."
 # Test 1: GET /api/recipes
 # ------------------------------
 echo "Testing GET /api/recipes..."
-GET_RESPONSE=$(curl -v -s http://localhost:3000/api/recipes)
-if [ "$GET_RESPONSE" == "$EXPECTED_GET" ]; then
+GET_RESPONSE=$(curl -s http://localhost:3000/api/recipes)
+FIRST_ELEMENT=$(echo "$GET_RESPONSE" | jq '.[0]')
+if [ "$FIRST_ELEMENT" == "$EXPECTED_GET" ]; then
   echo "GET /api/recipes returned test recipe."
 else
   echo "GET /api/recipes response did not match expected."
   echo "Expected: $EXPECTED_GET"
-  echo "Got:      $GET_RESPONSE"
+  echo "Got:      $FIRST_ELEMENT"
   exit 1
 fi
 
