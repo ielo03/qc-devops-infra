@@ -7,11 +7,6 @@ services:
       - "3307:3306"
     env_file:
       - ./.env
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-defaultpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-qc-test}
-      MYSQL_USER: ${MYSQL_USER:-root}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     volumes:
       - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
@@ -21,9 +16,7 @@ services:
       retries: 5
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: 061039790334.dkr.ecr.us-west-1.amazonaws.com/frontend:latest
     container_name: frontend
     ports:
       - "${FRONTEND_PORT:-3001}:${FRONTEND_PORT:-3001}"
@@ -31,28 +24,14 @@ services:
       - backend
     env_file:
       - ./.env
-    environment:
-      FRONTEND_HOST: ${FRONTEND_HOST:-0.0.0.0}
-      FRONTEND_PORT: ${FRONTEND_PORT:-3001}
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: 061039790334.dkr.ecr.us-west-1.amazonaws.com/frontend:latest
     container_name: backend
     ports:
       - "${BACKEND_PORT:-3002}:${BACKEND_PORT:-3002}"
     env_file:
       - ./.env
-    environment:
-      BACKEND_HOST: ${BACKEND_HOST:-0.0.0.0}
-      BACKEND_PORT: ${BACKEND_PORT:-3002}
-      DB_HOST: ${DB_HOST:-mysql}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_USER: ${DB_USER:-}
-      DB_PASSWORD: ${DB_PASSWORD:-}
-      DB_DATABASE: ${DB_DATABASE:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
 
   nginx:
     image: nginx:1.25
