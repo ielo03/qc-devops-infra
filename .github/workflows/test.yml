@@ -53,8 +53,8 @@ jobs:
             docker pull $FRONTEND_IMAGE
       
             echo "Starting new containers..."
-            docker run -d --restart unless-stopped --name backend $BACKEND_IMAGE
-            docker run -d --restart unless-stopped --name frontend $FRONTEND_IMAGE
+            docker run -d --env-file .env --restart unless-stopped --name backend $BACKEND_IMAGE
+            docker run -d --env-file .env --restart unless-stopped --name frontend $FRONTEND_IMAGE
       
             echo "QA Machine updated with new images."
         env:
