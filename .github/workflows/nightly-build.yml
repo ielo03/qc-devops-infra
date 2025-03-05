@@ -19,6 +19,23 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: source
 
+      - name: Set Up Environment Variables
+        working-directory: source
+        run: |
+          cat <<'EOF' > .env
+          DB_HOST=mysql
+          DB_PORT=3306
+          FRONTEND_PORT=3001
+          FRONTEND_HOST=0.0.0.0
+          BACKEND_PORT=3002
+          BACKEND_HOST=0.0.0.0
+          MYSQL_ROOT_PASSWORD=password
+          MYSQL_DATABASE=qc-test
+          MYSQL_USER=qc-user
+          MYSQL_PASSWORD=password
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          EOF
+
       - name: Run Backend Unit Tests
         working-directory: source/backend
         run: |
