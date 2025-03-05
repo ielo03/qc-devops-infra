@@ -1,0 +1,112 @@
+name: Nightly Build and Integration Tests
+
+on:
+  schedule:
+    - cron: "0 8 * * *"    # Runs daily at 08:00 UTC (adjust as needed)
+  workflow_dispatch:
+
+jobs:
+  Test:
+    runs-on: ubuntu-24.04
+    env:
+      AWS_REGION: us-west-1
+      # AWS account ID (ECR registry prefix)
+      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      # Image names with tag (adjust if needed)
+      FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
+      BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
+      # Application environment variables (override via GitHub Secrets)
+      DB_HOST: mysql
+      DB_PORT: 3306
+      FRONTEND_PORT: 3001
+      FRONTEND_HOST: 0.0.0.0
+      BACKEND_PORT: 3002
+      BACKEND_HOST: 0.0.0.0
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+    steps:
+      - name: Checkout Infra
+        uses: actions/checkout@v4
+
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          repository: ielo03/qc-devops-source
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: source
+
+      - name: Create .env file for backend and frontend
+        working-directory: source
+        run: |
+          cat <<'EOF' > .env
+          DB_HOST=mysql
+          DB_PORT=3306
+          FRONTEND_PORT=3001
+          FRONTEND_HOST=0.0.0.0
+          BACKEND_PORT=3002
+          BACKEND_HOST=0.0.0.0
+          MYSQL_ROOT_PASSWORD=password
+          MYSQL_DATABASE=qc-test
+          MYSQL_USER=qc-user
+          MYSQL_PASSWORD=password
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          EOF
+          cat .env
+
+      - name: Run Backend Unit Tests
+        working-directory: source/backend
+        run: |
+          npm install
+          npm test
+      
+      - name: Run Frontend Unit Tests
+        working-directory: source/frontend
+        run: |
+          npm install
+          npm test
+    
+  Push-Images:
+    needs: Test
+    runs-on: ubuntu-24.04
+    env:
+      AWS_REGION: us-west-1
+      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
+      BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
+    steps:
+      - name: Checkout Infra
+        uses: actions/checkout@v4
+
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          repository: ielo03/qc-devops-source
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: source
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        run: |
+          aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin $ECR_ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - name: Build and Push Backend Image
+        working-directory: source/backend
+        run: |
+          docker build -t $BACKEND_IMAGE .
+          docker push $BACKEND_IMAGE
+
+      - name: Build and Push Frontend Image
+        working-directory: source/frontend
+        run: |
+          docker build -t $FRONTEND_IMAGE .
+          docker push $FRONTEND_IMAGE
