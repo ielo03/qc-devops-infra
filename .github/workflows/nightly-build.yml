@@ -216,10 +216,36 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-
+  
       - name: Remove Pushed Docker Images
         run: |
           echo "Integration tests failed. Removing pushed Docker images..."
           aws ecr batch-delete-image --repository-name frontend --image-ids imageTag=latest --region $AWS_REGION
           aws ecr batch-delete-image --repository-name backend --image-ids imageTag=latest --region $AWS_REGION
+  
+      - name: Retag most recent Frontend image as latest
+        run: |
+          echo "Retrieving the most recent frontend image digest..."
+          LATEST_DIGEST=$(aws ecr describe-images --repository-name frontend --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageDigest' --output text)
+          if [ -z "$LATEST_DIGEST" ]; then
+            echo "No frontend images found to re-tag."
+            exit 1
+          fi
+          echo "Fetching image manifest for digest $LATEST_DIGEST..."
+          MANIFEST=$(aws ecr batch-get-image --repository-name frontend --image-ids imageDigest=$LATEST_DIGEST --query 'images[0].imageManifest' --output text)
+          echo "Retagging the image as latest..."
+          aws ecr put-image --repository-name frontend --image-tag latest --image-manifest "$MANIFEST"
+  
+      - name: Retag most recent Backend image as latest
+        run: |
+          echo "Retrieving the most recent backend image digest..."
+          LATEST_DIGEST=$(aws ecr describe-images --repository-name backend --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageDigest' --output text)
+          if [ -z "$LATEST_DIGEST" ]; then
+            echo "No backend images found to re-tag."
+            exit 1
+          fi
+          echo "Fetching image manifest for digest $LATEST_DIGEST..."
+          MANIFEST=$(aws ecr batch-get-image --repository-name backend --image-ids imageDigest=$LATEST_DIGEST --query 'images[0].imageManifest' --output text)
+          echo "Retagging the image as latest..."
+          aws ecr put-image --repository-name backend --image-tag latest --image-manifest "$MANIFEST"
   
