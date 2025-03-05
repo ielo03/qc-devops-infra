@@ -4,17 +4,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  Test:
+  Terminate-Instance:
     runs-on: Ubuntu-24.04
+    if: always()  # This ensures the job runs regardless of previous failures.
     steps:
-      - name: Run Integration Tests
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: 54.183.55.65
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd qc-devops-infra
-            # docker compose up -d
-            ./wait-for-it.sh localhost:3002 --timeout=120 --strict -- echo "Backend is up"
-            ./integration-tests.sh
+      - name: Terminate EC2 instance if exists
+        run: |
+          if [ -n "i-09c61361c04702ded" ]; then
+            echo "Terminating EC2 instance ${{ needs.Run-Smoketest.outputs.instance_id }}..."
+            aws ec2 terminate-instances --instance-ids ${{ needs.Run-Smoketest.outputs.instance_id }}
+          else
+            echo "No EC2 instance was launched, failing termination."
+            exit 1
+          fi
