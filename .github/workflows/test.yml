@@ -15,7 +15,7 @@ jobs:
       - name: Update QA Machine, Configure AWS, Log in to ECR, Stop Containers, Remove Images, Pull New Images, and Run Them
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ steps.get_ip.outputs.public_ip }}
+          host: ${{ secrets.QA_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
