@@ -220,7 +220,7 @@ jobs:
   Remove-Docker-Images:
     needs: [Push-Images, Run-Smoketest]
     runs-on: ubuntu-24.04
-    if: ${{ always() && needs.Run-Smoketest.outcome != 'success' }}
+    if: ${{ always() && needs.Run-Smoketest.conclusion != 'success' }}
     env:
       AWS_REGION: us-west-1
       ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
