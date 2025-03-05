@@ -41,6 +41,9 @@ jobs:
       
             echo "Removing backend and frontend containers..."
             docker rm backend frontend || true
+
+            echo "Backend image: $BACKEND_IMAGE"
+            echo "Frontend image: $FRONTEND_IMAGE"
       
             echo "Deleting backend and frontend images..."
             docker rmi $BACKEND_IMAGE $FRONTEND_IMAGE || true
