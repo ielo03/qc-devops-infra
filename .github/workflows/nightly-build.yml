@@ -191,11 +191,16 @@ jobs:
   Terminate-Instance:
     runs-on: Ubuntu-24.04
     needs: Run-Smoketest
+    if: always()
     steps:
-      - name: Terminate EC2 instance
+      - name: Terminate EC2 instance if exists
         run: |
-          echo "Terminating EC2 instance ${{ needs.Run-Smoketest.outputs.instance_id }}..."
-          aws ec2 terminate-instances --instance-ids ${{ needs.Run-Smoketest.outputs.instance_id }}
+          if [ -n "${{ needs.Run-Smoketest.outputs.instance_id }}" ]; then
+            echo "Terminating EC2 instance ${{ needs.Run-Smoketest.outputs.instance_id }}..."
+            aws ec2 terminate-instances --instance-ids ${{ needs.Run-Smoketest.outputs.instance_id }}
+          else
+            echo "No EC2 instance was launched, skipping termination."
+          fi
           
   Remove-Docker-Images:
     needs: [Push-Images, Run-Smoketest]
