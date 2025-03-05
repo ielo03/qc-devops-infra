@@ -13,7 +13,7 @@ echo "Running integration tests..."
 # ------------------------------
 echo "Testing GET /api/recipes..."
 GET_RESPONSE=$(curl -s http://localhost:3000/api/recipes)
-FIRST_ELEMENT=$(echo "$GET_RESPONSE" | jq '.[0]')
+FIRST_ELEMENT=$(echo "$GET_RESPONSE" | jq -c '.[0]')
 if [ "$FIRST_ELEMENT" == "$EXPECTED_GET" ]; then
   echo "GET /api/recipes returned test recipe."
 else
