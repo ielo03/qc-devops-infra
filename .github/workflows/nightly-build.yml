@@ -311,7 +311,7 @@ jobs:
             docker pull $FRONTEND_IMAGE
       
             echo "Starting new containers..."
-            docker run -d --restart unless-stopped --name backend $BACKEND_IMAGE
-            docker run -d --restart unless-stopped --name frontend $FRONTEND_IMAGE
+            docker run -d -p 3002:3002 --env-file .env --restart unless-stopped --name backend "$BACKEND_IMAGE"
+            docker run -d -p 3001:3001 --env-file .env --restart unless-stopped --name frontend "$FRONTEND_IMAGE"
       
             echo "QA Machine updated with new images."
