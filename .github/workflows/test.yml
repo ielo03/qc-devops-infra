@@ -12,7 +12,7 @@ jobs:
         run: |
           if [ -n "i-09c61361c04702ded" ]; then
             echo "Terminating EC2 instance i-09c61361c04702ded..."
-            aws ec2 terminate-instances --instance-ids i-09c61361c04702ded
+            aws ec2 terminate-instances --instance-ids i-09c61361c04702ded --region us-west-1
           else
             echo "No EC2 instance was launched, failing termination."
             exit 1
