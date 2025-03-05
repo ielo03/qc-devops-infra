@@ -200,7 +200,8 @@ jobs:
             echo "Terminating EC2 instance ${{ needs.Run-Smoketest.outputs.instance_id }}..."
             aws ec2 terminate-instances --instance-ids ${{ needs.Run-Smoketest.outputs.instance_id }}
           else
-            echo "No EC2 instance was launched, skipping termination."
+            echo "No EC2 instance was launched, failing termination."
+            exit 1
           fi
           
   Remove-Docker-Images:
