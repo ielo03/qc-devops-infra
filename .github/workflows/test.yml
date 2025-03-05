@@ -12,7 +12,7 @@ jobs:
       FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
       BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
     steps:
-      - name: Update QA Machine, Configure AWS, Log in to ECR, Stop Containers, Remove Images, Pull New Images, and Run Them
+      - name: Update QA Machine
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.QA_HOST }}
