@@ -6,7 +6,6 @@ on:
 jobs:
   Update-QA-Machine:
     runs-on: Ubuntu-24.04
-    needs: Run-Smoketest
     env:
       AWS_REGION: us-west-1
       ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
