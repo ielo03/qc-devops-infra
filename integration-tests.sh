@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+sleep 5
+
 # Define expected responses
 EXPECTED_GET='[{"id":1,"title":"Test","recipe":"<h3>Test</h3><p>This is a test.</p>"}]'
 
