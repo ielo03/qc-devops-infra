@@ -1,0 +1,22 @@
+name: Nightly Build and Integration Tests
+
+on:
+  schedule:
+    - cron: "0 8 * * *"    # Runs daily at 08:00 UTC (adjust as needed)
+  workflow_dispatch:
+
+jobs:
+  Test:
+    runs-on: Ubuntu-24.04
+    steps:
+      - name: Run Integration Tests
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: 54.183.55.65
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # cd qc-devops-infra
+            # docker compose up -d
+            ./wait-for-it.sh localhost:3002 --timeout=120 --strict -- echo "Backend is up"
+            ./integration-tests.sh
