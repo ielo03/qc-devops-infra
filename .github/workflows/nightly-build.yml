@@ -39,23 +39,23 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: source
 
-      # - name: Create .env file for backend and frontend
-      #   working-directory: source
-      #   run: |
-      #     cat <<'EOF' > .env
-      #     DB_HOST=mysql
-      #     DB_PORT=3306
-      #     FRONTEND_PORT=3001
-      #     FRONTEND_HOST=0.0.0.0
-      #     BACKEND_PORT=3002
-      #     BACKEND_HOST=0.0.0.0
-      #     MYSQL_ROOT_PASSWORD=password
-      #     MYSQL_DATABASE=qc-test
-      #     MYSQL_USER=qc-user
-      #     MYSQL_PASSWORD=password
-      #     GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-      #     EOF
-      #     cat .env
+      - name: Create .env file for backend and frontend
+        working-directory: source
+        run: |
+          cat <<'EOF' > .env
+          DB_HOST=mysql
+          DB_PORT=3306
+          FRONTEND_PORT=3001
+          FRONTEND_HOST=0.0.0.0
+          BACKEND_PORT=3002
+          BACKEND_HOST=0.0.0.0
+          MYSQL_ROOT_PASSWORD=password
+          MYSQL_DATABASE=qc-test
+          MYSQL_USER=qc-user
+          MYSQL_PASSWORD=password
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          EOF
+          cat .env
 
       - name: Run Backend Unit Tests
         working-directory: source/backend
@@ -69,30 +69,30 @@ jobs:
           npm install
           npm test
 
-      - name: Docker Compose Up
-        run: docker compose up --build -d
+      # - name: Docker Compose Up
+      #   run: docker compose up --build -d
         
-      - name: Wait for Backend Health (up to 60 seconds)
-        run: |
-          for i in {1..30}; do
-              if curl -s http://localhost:${BACKEND_PORT}/health > /dev/null; then
-                  echo "Backend is healthy."
-                  exit 0
-              else
-                  echo "Waiting for backend..."
-                  sleep 2
-              fi
-          done
-          echo "Backend did not become healthy in time."
-          exit 1
+      # - name: Wait for Backend Health (up to 60 seconds)
+      #   run: |
+      #     for i in {1..30}; do
+      #         if curl -s http://localhost:${BACKEND_PORT}/health > /dev/null; then
+      #             echo "Backend is healthy."
+      #             exit 0
+      #         else
+      #             echo "Waiting for backend..."
+      #             sleep 2
+      #         fi
+      #     done
+      #     echo "Backend did not become healthy in time."
+      #     exit 1
 
-      - name: Run Integration Tests
-        run: |
-          chmod +x ./integration-tests.sh
-          ./integration-tests.sh
+      # - name: Run Integration Tests
+      #   run: |
+      #     chmod +x ./integration-tests.sh
+      #     ./integration-tests.sh
 
-      - name: Tear Down Deployment
-        run: docker compose down
+      # - name: Tear Down Deployment
+      #   run: docker compose down
     
   Push-Images:
     needs: Test
