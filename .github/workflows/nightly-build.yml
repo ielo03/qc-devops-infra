@@ -72,6 +72,11 @@ jobs:
   Push-Images:
     needs: Test
     runs-on: ubuntu-24.04
+    env:
+      AWS_REGION: us-west-1
+      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
+      BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
     steps:
       - name: Checkout Infra
         uses: actions/checkout@v4
@@ -88,9 +93,20 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: "us-west-1"
-          
-      - name: Build and Push Images
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
         run: |
-          chmod +x ./push-images.sh
-          ./push-images.sh
+          aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin $ECR_ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - name: Build and Push Backend Image
+        working-directory: source/backend
+        run: |
+          docker build -t $BACKEND_IMAGE .
+          docker push $BACKEND_IMAGE
+
+      - name: Build and Push Frontend Image
+        working-directory: source/frontend
+        run: |
+          docker build -t $FRONTEND_IMAGE .
+          docker push $FRONTEND_IMAGE
