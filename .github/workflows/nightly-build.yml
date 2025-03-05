@@ -8,26 +8,6 @@ on:
 jobs:
   Test:
     runs-on: ubuntu-24.04
-    env:
-      AWS_REGION: us-west-1
-      # AWS account ID (ECR registry prefix)
-      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
-      # Image names with tag (adjust if needed)
-      FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
-      BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
-      # Application environment variables (override via GitHub Secrets)
-      DB_HOST: mysql
-      DB_PORT: 3306
-      FRONTEND_PORT: 3001
-      FRONTEND_HOST: 0.0.0.0
-      BACKEND_PORT: 3002
-      BACKEND_HOST: 0.0.0.0
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USER: ${{ secrets.MYSQL_USER }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
     steps:
       - name: Checkout Infra
         uses: actions/checkout@v4
@@ -38,24 +18,6 @@ jobs:
           repository: ielo03/qc-devops-source
           token: ${{ secrets.GITHUB_TOKEN }}
           path: source
-
-      - name: Create .env file for backend and frontend
-        working-directory: source
-        run: |
-          cat <<'EOF' > .env
-          DB_HOST=mysql
-          DB_PORT=3306
-          FRONTEND_PORT=3001
-          FRONTEND_HOST=0.0.0.0
-          BACKEND_PORT=3002
-          BACKEND_HOST=0.0.0.0
-          MYSQL_ROOT_PASSWORD=password
-          MYSQL_DATABASE=qc-test
-          MYSQL_USER=qc-user
-          MYSQL_PASSWORD=password
-          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-          EOF
-          cat .env
 
       - name: Run Backend Unit Tests
         working-directory: source/backend
@@ -110,3 +72,116 @@ jobs:
         run: |
           docker build -t $FRONTEND_IMAGE .
           docker push $FRONTEND_IMAGE
+
+  Run-Smoketest:
+    needs: Push-Images
+    runs-on: Ubuntu-24.04
+    env:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      FRONTEND_PORT: 3001
+      FRONTEND_HOST: 0.0.0.0
+      BACKEND_PORT: 3002
+      BACKEND_HOST: 0.0.0.0
+      AWS_REGION: us-west-1
+      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
+      BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
+    steps:
+      - name: Launch EC2
+        id: launch_ec2
+        run: |
+          echo "Launching EC2 instance from AMI ami-0c4df6d9107cf5a3c"
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --image-id ami-0c4df6d9107cf5a3c \
+            --instance-type t2.micro \
+            --count 1 \
+            --query 'Instances[0].InstanceId' \
+            --output text)
+          echo "Launched instance ID: $INSTANCE_ID"
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for EC2 Health
+        run: |
+          INSTANCE_ID=${{ steps.launch_ec2.outputs.instance_id }}
+          echo "Waiting for instance $INSTANCE_ID to be healthy..."
+          # Wait until both system and instance status checks pass
+          aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+          echo "Instance $INSTANCE_ID is healthy!"
+
+      - name: Get Public IP of EC2 Instance
+        id: get_ip
+        run: |
+          INSTANCE_ID=${{ steps.launch_ec2.outputs.instance_id }}
+          echo "Retrieving public IP for instance $INSTANCE_ID"
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids $INSTANCE_ID \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+          echo "Public IP: $PUBLIC_IP"
+
+      - name: Set Up EC2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ steps.get_ip.outputs.public_ip }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Connected to EC2 instance at $(hostname)"
+            cd qc-devops-infra
+            git pull
+            cat <<'EOF' > .env
+            DB_HOST=mysql
+            DB_PORT=3306
+            FRONTEND_PORT=3001
+            FRONTEND_HOST=0.0.0.0
+            BACKEND_PORT=3002
+            BACKEND_HOST=0.0.0.0
+            MYSQL_ROOT_PASSWORD=password
+            MYSQL_DATABASE=qc-test
+            MYSQL_USER=qc-user
+            MYSQL_PASSWORD=password
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            EOF
+            cd ../qc-devops-source
+            git pull
+            cd ..
+            docker system prune -a --volumes -f
+            aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 061039790334.dkr.ecr.us-west-1.amazonaws.com
+
+      - name: Run Integration Tests
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ steps.get_ip.outputs.public_ip }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd qc-devops-infra
+            docker compose up -d
+            ./wait-for-it.sh localhost:3002 --timeout=120 --strict -- echo "Backend is up"
+            ./integration-tests.sh
+
+  Terminate-Instance:
+    runs-on: Ubuntu-24.04
+    needs: Run-Smoketest
+    steps:
+      - name: Terminate EC2 instance
+        run: |
+          echo "Terminating EC2 instance ${{ needs.Run-Smoketest.outputs.instance_id }}..."
+          aws ec2 terminate-instances --instance-ids ${{ needs.Run-Smoketest.outputs.instance_id }}
+          
+  Remove-Docker-Images:
+    needs: Run-Smoketest
+    runs-on: ubuntu-24.04
+    if: ${{ needs.Run-Smoketest.outcome != 'success' }}
+    env:
+      AWS_REGION: us-west-1
+      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+    steps:
+      - name: Remove Pushed Docker Images
+        run: |
+          echo "Integration tests failed. Removing pushed Docker images..."
+          aws ecr batch-delete-image --repository-name frontend --image-ids imageTag=latest --region $AWS_REGION
+          aws ecr batch-delete-image --repository-name backend --image-ids imageTag=latest --region $AWS_REGION
+  
