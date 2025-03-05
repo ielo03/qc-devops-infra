@@ -14,7 +14,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # cd qc-devops-infra
+            cd qc-devops-infra
             # docker compose up -d
             ./wait-for-it.sh localhost:3002 --timeout=120 --strict -- echo "Backend is up"
             ./integration-tests.sh
