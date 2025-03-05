@@ -121,6 +121,7 @@ jobs:
             --instance-type t2.micro \
             --key-name github \
             --security-group-ids sg-062de454c57b0dc28 \
+            --iam-instance-profile Arn=arn:aws:iam::061039790334:role/SmokeTest \
             --count 1 \
             --query 'Instances[0].InstanceId' \
             --output text)
