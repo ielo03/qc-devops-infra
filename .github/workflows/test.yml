@@ -6,28 +6,34 @@ on:
 jobs:
   Update-QA-Machine:
     runs-on: Ubuntu-24.04
+    needs: Run-Smoketest
     env:
       AWS_REGION: us-west-1
       ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
       BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
     steps:
-      - name: Update QA Machine
+      - name: Update QA Machine, Configure AWS, Log in to ECR, Stop Containers, Remove Images, Pull New Images, and Run Them
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.QA_HOST }}
+          host: ${{ steps.get_ip.outputs.public_ip }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           script: |
             echo "Updating QA Machine..."
             # (Insert any additional update commands if needed)
-        
+      
             echo "Configuring AWS credentials..."
             export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
             export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
             export AWS_REGION="us-west-1"
             export ECR_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
-            
+      
+            echo "Configuring image variables..."
+            export FRONTEND_IMAGE="${{ env.FRONTEND_IMAGE }}"
+            export BACKEND_IMAGE="${{ env.BACKEND_IMAGE }}"
+      
             echo "Logging in to ECR..."
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
       
@@ -49,3 +55,8 @@ jobs:
             docker run -d --restart unless-stopped --name frontend $FRONTEND_IMAGE
       
             echo "QA Machine updated with new images."
+        env:
+          AWS_REGION: us-west-1
+          ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
+          BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
