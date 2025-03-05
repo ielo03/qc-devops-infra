@@ -4,26 +4,49 @@ on:
   workflow_dispatch:
 
 jobs:
-  Terminate-Instance:
+  Update-QA-Machine:
     runs-on: Ubuntu-24.04
-    if: always()  # This ensures the job runs regardless of previous failures.
+    needs: Run-Smoketest
     env:
       AWS_REGION: us-west-1
       ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+      FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
+      BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Update QA Machine
+        uses: appleboy/ssh-action@v0.1.7
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-    
-      - name: Terminate EC2 instance if exists
-        run: |
-          if [ -n "i-09c61361c04702de" ]; then
-            echo "Terminating EC2 instance i-09c61361c04702de..."
-            aws ec2 terminate-instances --instance-ids i-09c61361c04702dea --region us-west-1
-          else
-            echo "No EC2 instance was launched, failing termination."
-            exit 1
-          fi
+          host: ${{ secrets.QA_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Updating QA Machine..."
+            # (Insert any additional update commands if needed)
+        
+            echo "Configuring AWS credentials..."
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+            export AWS_REGION="us-west-1"
+            export ECR_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
+            
+            echo "Logging in to ECR..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
+      
+            echo "Stopping backend and frontend containers..."
+            docker stop backend frontend || true
+      
+            echo "Removing backend and frontend containers..."
+            docker rm backend frontend || true
+      
+            echo "Deleting backend and frontend images..."
+            docker rmi $BACKEND_IMAGE $FRONTEND_IMAGE || true
+      
+            echo "Pulling new latest images..."
+            docker pull $BACKEND_IMAGE
+            docker pull $FRONTEND_IMAGE
+      
+            echo "Starting new containers..."
+            docker run -d --restart unless-stopped --name backend $BACKEND_IMAGE
+            docker run -d --restart unless-stopped --name frontend $FRONTEND_IMAGE
+      
+            echo "QA Machine updated with new images."
