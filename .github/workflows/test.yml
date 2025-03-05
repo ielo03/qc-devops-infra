@@ -11,8 +11,8 @@ jobs:
       - name: Terminate EC2 instance if exists
         run: |
           if [ -n "i-09c61361c04702ded" ]; then
-            echo "Terminating EC2 instance ${{ needs.Run-Smoketest.outputs.instance_id }}..."
-            aws ec2 terminate-instances --instance-ids ${{ needs.Run-Smoketest.outputs.instance_id }}
+            echo "Terminating EC2 instance i-09c61361c04702ded..."
+            aws ec2 terminate-instances --instance-ids i-09c61361c04702ded
           else
             echo "No EC2 instance was launched, failing termination."
             exit 1
