@@ -104,6 +104,8 @@ jobs:
       ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
       FRONTEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/frontend:latest"
       BACKEND_IMAGE: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/backend:latest"
+    outputs:
+      instance_id: ${{ steps.launch_ec2.outputs.instance_id }}
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -206,9 +208,10 @@ jobs:
     
       - name: Terminate EC2 instance if exists
         run: |
-          if [ -n "i-09c61361c04702de" ]; then
-            echo "Terminating EC2 instance i-09c61361c04702de..."
-            aws ec2 terminate-instances --instance-ids i-09c61361c04702dea --region us-west-1
+          INSTANCE_ID="${{ needs.Run-Smoketest.outputs.instance_id }}"
+          if [ -n "$INSTANCE_ID" ]; then
+            echo "Terminating EC2 instance $INSTANCE_ID..."
+            aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region us-west-1
           else
             echo "No EC2 instance was launched, failing termination."
             exit 1
