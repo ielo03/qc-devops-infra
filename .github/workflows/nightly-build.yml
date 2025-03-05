@@ -189,9 +189,9 @@ jobs:
           aws ec2 terminate-instances --instance-ids ${{ needs.Run-Smoketest.outputs.instance_id }}
           
   Remove-Docker-Images:
-    needs: Run-Smoketest
+    needs: [Push-Images, Run-Smoketest]
     runs-on: ubuntu-24.04
-    if: ${{ needs.Run-Smoketest.outcome != 'success' }}
+    if: ${{ always() && needs.Run-Smoketest.outcome != 'success' }}
     env:
       AWS_REGION: us-west-1
       ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
