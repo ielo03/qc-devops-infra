@@ -192,9 +192,9 @@ jobs:
             ./integration-tests.sh
             
   Remove-Docker-Images:
-    needs: [Push-Images, Run-Smoketest]
+    needs: Run-Smoketest
     runs-on: ubuntu-24.04
-    if: ${{ always() && needs.Run-Smoketest.conclusion != 'success' }}
+    if: ${{ failure() }}
     env:
       AWS_REGION: us-west-1
       ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
