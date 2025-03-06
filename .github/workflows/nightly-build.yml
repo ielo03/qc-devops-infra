@@ -190,33 +190,7 @@ jobs:
             docker compose up -d
             ./wait-for-it.sh localhost:3002 --timeout=120 --strict -- echo "Backend is up"
             ./integration-tests.sh
-
-  Terminate-Instance:
-    runs-on: Ubuntu-24.04
-    needs: Run-Smoketest
-    if: always()
-    env:
-      AWS_REGION: us-west-1
-      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-    
-      - name: Terminate EC2 instance if exists
-        run: |
-          INSTANCE_ID="${{ needs.Run-Smoketest.outputs.instance_id }}"
-          if [ -n "$INSTANCE_ID" ]; then
-            echo "Terminating EC2 instance $INSTANCE_ID..."
-            aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region us-west-1
-          else
-            echo "No EC2 instance was launched, failing termination."
-            exit 1
-          fi
-          
+            
   Remove-Docker-Images:
     needs: [Push-Images, Run-Smoketest]
     runs-on: ubuntu-24.04
@@ -263,6 +237,32 @@ jobs:
           MANIFEST=$(aws ecr batch-get-image --repository-name backend --image-ids imageDigest=$LATEST_DIGEST --query 'images[0].imageManifest' --output text)
           echo "Retagging the image as latest..."
           aws ecr put-image --repository-name backend --image-tag latest --image-manifest "$MANIFEST"
+
+  Terminate-Instance:
+    runs-on: Ubuntu-24.04
+    needs: Run-Smoketest
+    if: always()
+    env:
+      AWS_REGION: us-west-1
+      ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+    
+      - name: Terminate EC2 instance if exists
+        run: |
+          INSTANCE_ID="${{ needs.Run-Smoketest.outputs.instance_id }}"
+          if [ -n "$INSTANCE_ID" ]; then
+            echo "Terminating EC2 instance $INSTANCE_ID..."
+            aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region us-west-1
+          else
+            echo "No EC2 instance was launched, failing termination."
+            exit 1
+          fi
   
   Update-QA-Machine:
     runs-on: Ubuntu-24.04
